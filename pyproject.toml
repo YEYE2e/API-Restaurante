@@ -11,3 +11,5 @@ dependencies = [
 entrypoint = "main:app"
 [tool.uv]
 package = false
+[tool.setuptools]
+packages = ["models", "routers"]
