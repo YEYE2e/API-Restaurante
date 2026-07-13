@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+#mermaid
+DiagER.mermaid
+#requirements
+requerimientos.md
