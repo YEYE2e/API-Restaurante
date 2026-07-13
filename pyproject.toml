@@ -9,3 +9,5 @@ dependencies = [
 ]
 [tool.fastapi]
 entrypoint = "main:app"
+[tool.uv]
+package = false
