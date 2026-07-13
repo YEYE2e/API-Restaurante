@@ -1,8 +1,11 @@
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, Form, Response, HTTPException, status
 from typing import Annotated
 from models.area import Area
 from models.empleado import Empleado
+# pyrefly: ignore [missing-import]
 from supabase import create_client, Client
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 import os
 
