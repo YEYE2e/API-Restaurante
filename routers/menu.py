@@ -4,6 +4,9 @@ from database import supabase
 
 router = APIRouter(prefix="/menu", tags=["menu"])
 
+#   TODO: Hacer busquedas por nombre
+#       : Hacer Soft Delete del item del menu (revisar tabla plato) (opcional?)
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_menu_item(item: ItemMenu):
     try:

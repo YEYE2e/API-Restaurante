@@ -6,6 +6,14 @@ from database import supabase
 
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 
+#   TODO: Usar Variables de memoria para actualizar plato por plato hasta completar la orden
+#         (Posiblemente se use un diccionario como base de datos temporal)
+#       : Imprimir pedidos por empleado (opcional?)
+#       : Obtener datos del empleado mediante el id insertado en pedido
+#       : Crear tabla cliente
+#       : Imprimir pedidos por grupo
+
+
 # Pydantic schemas for the complex JSON input
 class DetallePedidoInput(BaseModel):
     item_menu_id: int

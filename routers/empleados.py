@@ -1,8 +1,18 @@
 from fastapi import APIRouter, Form, HTTPException, status
+from postgrest.exceptions import APIError
 from typing import Annotated
 from models.area import Area
 from models.empleado import Empleado
+from datetime import datetime
 from database import supabase
+
+
+#   TODO: Imprimir empleados por area cuyo estado sea True.
+#       : Imprimir todos los empleados (opcional)
+#       : Cambiar forma de login (opcional?)
+#       : Cambiar permisos para eliminar usuario (Revisar documento Seguridad)
+
+
 
 router = APIRouter()
 
@@ -38,7 +48,7 @@ def create_user(area_busqueda: str, empleado: Empleado):
     return data.data
     
 
-@router.post("/empleado/login")
+@router.post("/empleado/login/")
 def login(nombre: Annotated[str, Form()],
           pin: Annotated[int, Form()]):
     data = (supabase.table("empleado")
@@ -50,6 +60,26 @@ def login(nombre: Annotated[str, Form()],
     if not data.data:
         raise HTTPException(
             status_code=401, 
-            detail=f"Credenciales incorrectas!."
+            detail=f"Credenciales incorrectas!"
+        )
+    if data.data[0]["estado"]==False:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Usuario no pertenece más a la empresa."
         )
     return data.data
+
+@router.patch("/empleado/delete/")
+def delete_user(id: int):
+    mensaje = ""
+    now_str = datetime.now().isoformat()
+    try:
+        data = (supabase.table("empleado")
+                .update({"estado": False,
+                        "fecha_salida": now_str})
+                .eq("id", id)
+                .execute())
+        mensaje = "Éxito:", data.data
+    except APIError as e:
+        mensaje = "Error de Supabase:", e.message
+    return mensaje
