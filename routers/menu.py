@@ -4,7 +4,7 @@ from database import supabase
 
 router = APIRouter(prefix="/menu", tags=["menu"])
 
-#   TODO: Hacer busquedas por nombre
+#   TODO: [HECHO] Hacer busquedas por nombre
 #       : Hacer Soft Delete del item del menu (revisar tabla plato) (opcional?)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -46,3 +46,26 @@ def get_menu_item(item_id: int):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+@router.get("/?q={query}")
+def get_menu_query(query: str):
+    try:
+        data = (supabase.table("item_menu")
+                .select("*")
+                .ilike(f"%{query}%")
+                .execute())
+        if not data.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Item/s de nombre {query} no encontrado/s"
+            )
+        return data.data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+

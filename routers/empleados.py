@@ -7,7 +7,7 @@ from datetime import datetime
 from database import supabase
 
 
-#   TODO: Imprimir empleados por area cuyo estado sea True.
+#   TODO: Imprimir empleados filtrados por area cuyo estado de empleado sea True.
 #       : Imprimir todos los empleados (opcional)
 #       : Cambiar forma de login (opcional?)
 #       : Cambiar permisos para eliminar usuario (Revisar documento Seguridad)

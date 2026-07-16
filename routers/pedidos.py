@@ -6,12 +6,10 @@ from database import supabase
 
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 
-#   TODO: Usar Variables de memoria para actualizar plato por plato hasta completar la orden
-#         (Posiblemente se use un diccionario como base de datos temporal)
-#       : Imprimir pedidos por empleado (opcional?)
-#       : Obtener datos del empleado mediante el id insertado en pedido
-#       : Crear tabla cliente
-#       : Imprimir pedidos por grupo
+#   TODO: Imprimir pedidos por empleado (opcional?)
+#       : [HECHO] Obtener datos del empleado mediante el id insertado en pedido
+#       : [HECHO] Filtrar pedidos a despachar por grupo
+#       : Implementar asyncio (o talvez no por la atomicidad de postgresql)
 
 
 # Pydantic schemas for the complex JSON input
@@ -40,7 +38,8 @@ def create_comanda(comanda: PedidoInput):
             "grupo_id": comanda.grupo_id,
             "prioridad": comanda.prioridad,
             "origen_pedido": comanda.origen_pedido,
-            "numero_mesa": comanda.numero_mesa
+            "numero_mesa": comanda.numero_mesa,
+            "estado_comanda": "por aceptar" #le agregue un estado predeterminado (puede cambiarse dentro de la base de datos)
         }
         res_pedido = supabase.table("pedido").insert(pedido_payload).execute()
         
@@ -102,10 +101,29 @@ def create_comanda(comanda: PedidoInput):
             detail=f"Error al procesar la comanda: {str(e)}"
         )
 
+# Q: deberiamos agregar mas estado con neq? posiblemente si
 @router.get("/activos")
 def get_pedidos_activos():
     try:
-        res = supabase.table("pedido").select("*, detalle_pedido(*)").neq("estado_comanda", "Despachado").execute()
+        res = (supabase.table("pedido")
+               .select("*, detalle_pedido(*)")
+               .neq("estado_comanda", "Despachado")
+               .execute())
+        return res.data
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener pedidos activos: {str(e)}"
+        )
+    
+@router.get("/activos/{grupo_id}")
+def get_pedidos_grupo_activos(grupo_id: int):
+    try:
+        res = (supabase.table("pedido")
+               .select("*, detalle_pedido(*)")
+               .eq("grupo_id", grupo_id)
+               .neq("estado_comanda", "Despachado")
+               .execute())
         return res.data
     except Exception as e:
         raise HTTPException(
@@ -128,6 +146,27 @@ def update_pedido_estado(pedido_id: int, input_data: EstadoUpdateInput):
                 detail=f"Pedido con id {pedido_id} no encontrado."
             )
         return res.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error al actualizar el estado del pedido: {str(e)}"
+        )
+
+@router.get("/{pedido_id}/{user_id}")
+def get_user_pedido(pedido_id: int):
+    try:
+        data = (supabase.table("pedido")
+                .select("empleado(nombre, id)")
+                .eq("id",pedido_id)
+                .execute())
+        if not data.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pedido con id {pedido_id} no encontrado."
+            )
+        return data.data[0]["empleado"]
     except HTTPException:
         raise
     except Exception as e:
