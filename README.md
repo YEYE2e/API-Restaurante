@@ -3,7 +3,7 @@
 ## Descripcion General
 El Chato Ranch es una reserva ecologica que cuenta con una seccion de restaurante y venta de recuerdos para turistas. El giro del negocio es turistico, gastronomico y de comercio minorista mediante la venta de recuerdos.
 
-Este proyecto se centra especificamente en la gestion del servicio del restaurante (sector gastronomico). Los requerimientos, necesidades y problemas del establecimiento se identificaron mediante entrevistas directas con el dueno y la encargada del lugar a traves de WhatsApp.
+Este proyecto se centra especificamente en la gestion del servicio del restaurante (sector gastronomico).
 
 ## Funcionalidades Principales
 * Gestion de empleados y control de acceso.
