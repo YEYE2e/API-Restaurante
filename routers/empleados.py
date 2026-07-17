@@ -3,7 +3,7 @@ from postgrest.exceptions import APIError
 from typing import Annotated
 from models.area import Area
 from models.empleado import Empleado
-from datetime import datetime
+from datetime import datetime, timezone
 from database import supabase
 
 
@@ -48,31 +48,44 @@ def create_user(area_busqueda: str, empleado: Empleado):
     return data.data
     
 
-@router.post("/empleado/login/")
-def login(nombre: Annotated[str, Form()],
-          pin: Annotated[int, Form()]):
-    data = (supabase.table("empleado")
-            .select("*")
-            .eq("nombre", nombre)
-            .eq("pin_acceso", pin)
-            .execute())
+@router.post("/empleado/login")
+def login(nombre: Annotated[str, Form()], pin: Annotated[int, Form()]):
+    try:
+        # Excluimos el pin_acceso en el select por seguridad
+        data = (supabase.table("empleado")
+                .select("id, nombre, cargo, estado, area_id") 
+                .eq("nombre", nombre)
+                .eq("pin_acceso", pin)
+                .execute())
 
-    if not data.data:
+        if not data.data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Credenciales incorrectas."
+            )
+            
+        usuario = data.data[0]
+        if not usuario["estado"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El usuario no se encuentra activo."
+            )
+            
+        return usuario
+        
+    except HTTPException:
+        raise
+    except Exception:
+        # Error genérico 500 sin exponer detalles de la base de datos
         raise HTTPException(
-            status_code=401, 
-            detail=f"Credenciales incorrectas!"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno de autenticación."
         )
-    if data.data[0]["estado"]==False:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Usuario no pertenece más a la empresa."
-        )
-    return data.data
 
 @router.patch("/empleado/delete/")
 def delete_user(id: int):
     mensaje = ""
-    now_str = datetime.now().isoformat()
+    now_str = datetime.now(timezone.utc).isoformat()
     try:
         data = (supabase.table("empleado")
                 .update({"estado": False,

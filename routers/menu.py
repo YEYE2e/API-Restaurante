@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from models.item_menu import ItemMenu
 from database import supabase
+from typing import Optional
 
 router = APIRouter(prefix="/menu", tags=["menu"])
 
@@ -19,14 +20,43 @@ def create_menu_item(item: ItemMenu):
         )
 
 @router.get("/")
-def get_menu_items():
+def get_menu_items(q: Optional[str] = None):
     try:
+        if q:
+            # Búsqueda ignorando mayúsculas/minúsculas
+            data = (supabase.table("item_menu")
+                    .select("*")
+                    .ilike("nombre", f"%{q}%")
+                    .execute())
+            return data.data
+            
+        # Si no se envía el parámetro 'q', retorna todo el menú
         data = supabase.table("item_menu").select("*").execute()
         return data.data
-    except Exception as e:
+        
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Error al procesar la solicitud del menú."
+        )@router.get("/")
+def get_menu_items(q: Optional[str] = None):
+    try:
+        if q:
+            # Búsqueda ignorando mayúsculas/minúsculas
+            data = (supabase.table("item_menu")
+                    .select("*")
+                    .ilike("nombre", f"%{q}%")
+                    .execute())
+            return data.data
+            
+        # Si no se envía el parámetro 'q', retorna todo el menú
+        data = supabase.table("item_menu").select("*").execute()
+        return data.data
+        
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al procesar la solicitud del menú."
         )
 
 @router.get("/{item_id}")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
+from pydantic import BaseModel, Field, StringConstraints
+from typing import List, Optional, Annotated
+from datetime import datetime, timezone
 from database import supabase
 
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
@@ -11,12 +11,11 @@ router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 #       : [HECHO] Filtrar pedidos a despachar por grupo
 #       : Implementar asyncio (o talvez no por la atomicidad de postgresql)
 
-
 # Pydantic schemas for the complex JSON input
 class DetallePedidoInput(BaseModel):
-    item_menu_id: int
-    cantidad: int
-    notas: Optional[str] = None
+    item_menu_id: int = Field(..., gt=0)
+    cantidad: int = Field(..., gt=0, description="La cantidad solicitada debe ser de al menos 1")
+    notas: Annotated[str | None, StringConstraints(strip_whitespace=True)] = None
 
 class PedidoInput(BaseModel):
     emisor_id: Optional[int] = None
@@ -32,83 +31,45 @@ class EstadoUpdateInput(BaseModel):
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_comanda(comanda: PedidoInput):
     try:
-        # 1. Insert header data (pedido) into Supabase
-        pedido_payload = {
-            "emisor_id": comanda.emisor_id,
-            "grupo_id": comanda.grupo_id,
-            "prioridad": comanda.prioridad,
-            "origen_pedido": comanda.origen_pedido,
-            "numero_mesa": comanda.numero_mesa,
-            "estado_comanda": "por aceptar" #le agregue un estado predeterminado (puede cambiarse dentro de la base de datos)
-        }
-        res_pedido = supabase.table("pedido").insert(pedido_payload).execute()
+        detalles_json = [
+            {
+                "item_menu_id": d.item_menu_id,
+                "cantidad": d.cantidad,
+                "notas": d.notas
+            }
+            for d in comanda.detalles
+        ]
         
-        if not res_pedido.data:
+        params = {
+            "p_emisor_id": comanda.emisor_id,
+            "p_grupo_id": comanda.grupo_id,
+            "p_prioridad": comanda.prioridad,
+            "p_origen_pedido": comanda.origen_pedido,
+            "p_numero_mesa": comanda.numero_mesa,
+            "p_detalles": detalles_json
+        }
+        
+        res = supabase.rpc("crear_pedido_con_stock", params).execute()
+        return res.data
+        
+    except Exception as e:
+        error_text = getattr(e, "message", str(e))
+        if "no existe" in error_text or "stock suficiente" in error_text:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No se pudo crear la cabecera del pedido."
+                detail=error_text
             )
-        
-        pedido_id = res_pedido.data[0]["id"]
-        
-        # 2. Prepare and insert details list (detalle_pedido)
-        detalles_payload = []
-        for det in comanda.detalles:
-            detalles_payload.append({
-                "pedido_id": pedido_id,
-                "item_menu_id": det.item_menu_id,
-                "cantidad": det.cantidad,
-                "notas_especificas": det.notas  # Maps input 'notas' to DB column
-            })
-            
-        res_detalles = supabase.table("detalle_pedido").insert(detalles_payload).execute()
-        
-        # 3. Check and update stock for each item in the order
-        for det in comanda.detalles:
-            item_res = supabase.table("item_menu").select("nombre, stock_disponible").eq("id", det.item_menu_id).execute()
-            if not item_res.data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"El plato con ID {det.item_menu_id} no existe."
-                )
-            
-            plato = item_res.data[0]
-            stock_actual = plato["stock_disponible"]
-            
-            if stock_actual < det.cantidad:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"El plato '{plato['nombre']}' no tiene stock suficiente. Stock disponible: {stock_actual}, Solicitado: {det.cantidad}"
-                )
-            
-            # Update stock in database
-            nuevo_stock = stock_actual - det.cantidad
-            supabase.table("item_menu").update({"stock_disponible": nuevo_stock}).eq("id", det.item_menu_id).execute()
-        
-        return {
-            "mensaje": "Comanda creada exitosamente",
-            "pedido": res_pedido.data[0],
-            "detalles": res_detalles.data
-        }
-        
-    except HTTPException:
-        # Re-raise HTTPExceptions
-        raise
-    except Exception as e:
-        # Catch any database or connection errors and raise HTTPException
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error al procesar la comanda: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor."
         )
 
 # Q: deberiamos agregar mas estado con neq? posiblemente si
 @router.get("/activos")
 def get_pedidos_activos():
     try:
-        res = (supabase.table("pedido")
-               .select("*, detalle_pedido(*)")
-               .neq("estado_comanda", "Despachado")
-               .execute())
+        query = "*, empleado:emisor_id(nombre), detalle_pedido(*, item_menu:item_menu_id(nombre))"
+        res = supabase.table("pedido").select(query).neq("estado_comanda", "Despachado").execute()
         return res.data
     except Exception as e:
         raise HTTPException(
@@ -134,7 +95,7 @@ def get_pedidos_grupo_activos(grupo_id: int):
 @router.patch("/{pedido_id}/estado")
 def update_pedido_estado(pedido_id: int, input_data: EstadoUpdateInput):
     try:
-        now_str = datetime.now().isoformat()
+        now_str = datetime.now(timezone.utc).isoformat()
         res = supabase.table("pedido").update({
             "estado_comanda": input_data.estado,
             "fecha_actualizacion": now_str
