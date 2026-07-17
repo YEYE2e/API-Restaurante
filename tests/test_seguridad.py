@@ -66,6 +66,7 @@ def test_crear_pedido_exitoso(mock_supabase):
         "prioridad": "Alta",
         "origen_pedido": "Mesa",
         "numero_mesa": "5",
+        "nombre_referencia": "Mesa de la esquina",
         "detalles": [
             {"item_menu_id": 1, "cantidad": 2, "notas": "Sin sal"}
         ]
@@ -73,6 +74,16 @@ def test_crear_pedido_exitoso(mock_supabase):
     response = client.post("/pedidos/", json=payload)
     assert response.status_code == 201
     assert response.json() == {"mensaje": "Comanda creada exitosamente", "pedido_id": 4}
+    # Verify that the RPC call expected the new parameter
+    mock_supabase.rpc.assert_called_with("crear_pedido_con_stock", {
+        "p_emisor_id": 1,
+        "p_grupo_id": None,
+        "p_prioridad": "Alta",
+        "p_origen_pedido": "Mesa",
+        "p_numero_mesa": "5",
+        "p_nombre_referencia": "Mesa de la esquina",
+        "p_detalles": [{"item_menu_id": 1, "cantidad": 2, "notas": "Sin sal"}]
+    })
 
 @patch("routers.pedidos.supabase")
 def test_crear_pedido_sin_stock(mock_supabase):

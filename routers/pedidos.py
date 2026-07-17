@@ -23,6 +23,7 @@ class PedidoInput(BaseModel):
     prioridad: Optional[str] = None
     origen_pedido: Optional[str] = None
     numero_mesa: Optional[str] = None
+    nombre_referencia: Annotated[str | None, StringConstraints(strip_whitespace=True)] = None
     detalles: List[DetallePedidoInput]
 
 class EstadoUpdateInput(BaseModel):
@@ -46,6 +47,7 @@ def create_comanda(comanda: PedidoInput):
             "p_prioridad": comanda.prioridad,
             "p_origen_pedido": comanda.origen_pedido,
             "p_numero_mesa": comanda.numero_mesa,
+            "p_nombre_referencia": comanda.nombre_referencia,
             "p_detalles": detalles_json
         }
         
