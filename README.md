@@ -1,24 +1,46 @@
 # API Restaurante - El Chato Ranch
 
-## Descripcion General
-El Chato Ranch es una reserva ecologica que cuenta con una seccion de restaurante y venta de recuerdos para turistas. El giro del negocio es turistico, gastronomico y de comercio minorista mediante la venta de recuerdos.
+Este es el backend para la gestión del restaurante de la reserva ecológica El Chato Ranch. Está desarrollado con FastAPI y utiliza Supabase (PostgreSQL) como base de datos.
 
-Este proyecto se centra especificamente en la gestion del servicio del restaurante (sector gastronomico).
+La API se encarga de controlar el acceso de empleados, gestionar los platos del menú y procesar los pedidos de forma transaccional, validando que haya stock disponible en la base de datos antes de confirmar cada comanda.
 
-## Funcionalidades Principales
-* Gestion de empleados y control de acceso.
-* Administracion y busqueda de items del menu.
-* Registro y actualizacion de pedidos de forma transaccional mediante funciones RPC (validando stock disponible).
-* Control de marcas de tiempo en formato UTC para evitar problemas de desfase horario.
+## Estructura del proyecto
 
-## Tecnologias
-* FastAPI
-* Supabase (PostgreSQL)
-* Pydantic
-* Pytest
+* `main.py`: Punto de entrada de la aplicación.
+* `database.py`: Configuración y conexión con Supabase.
+* `routers/`: Endpoints de la API (`empleados.py`, `menu.py`, `pedidos.py`).
+* `models/`: Esquemas de Pydantic para validación de datos.
+* `tests/`: Pruebas de seguridad y funcionamiento del flujo de pedidos.
+
+## Configuración y arranque
+
+1. Instala las dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Configura las credenciales de Supabase en un archivo `.env` en la raíz del proyecto:
+   ```env
+   SUPABASE_URL="https://tu-proyecto.supabase.co"
+   SUPABASE_PUBLISHABLE_KEY="tu-clave-publica-de-supabase"
+   ```
+
+3. Inicia el servidor de desarrollo:
+   ```bash
+   fastapi dev main.py
+   ```
+   Una vez corriendo, puedes ver y probar los endpoints en: `http://127.0.0.1:8000/docs`
+
+## Endpoints principales
+
+* **Empleados**: Registro de áreas, creación de usuarios, login con PIN y baja lógica de personal.
+* **Menú**: Registro y búsqueda de platos por nombre (ej. `/menu/?q=plato`).
+* **Pedidos**: Creación de comandas (utiliza una función RPC en PostgreSQL para descontar stock de forma segura), consulta de pedidos activos y actualización de estados en formato UTC.
 
 ## Pruebas
-Para correr los tests automatizados de seguridad y funcionalidad:
+
+Para ejecutar la suite de pruebas unitarias y de integración:
+
 ```bash
-PYTHONPATH=. .venv/bin/pytest tests/
+PYTHONPATH=. pytest tests/
 ```
