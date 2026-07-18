@@ -118,7 +118,7 @@ def update_pedido_estado(pedido_id: int, input_data: EstadoUpdateInput):
         )
 
 @router.patch("/{pedido_id}/platos")
-def update_pedido_estado(pedido_id: int, input_platos: List[DetallePedidoInput]):
+def update_pedido_platos(pedido_id: int, input_platos: List[DetallePedidoInput]):
     detalles_json = [
             {
                 "item_menu_id": d.item_menu_id,
