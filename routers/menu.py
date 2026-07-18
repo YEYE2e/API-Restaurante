@@ -77,25 +77,6 @@ def get_menu_item(item_id: int):
             detail=str(e)
         )
 
-@router.get("/?q={query}")
-def get_menu_query(query: str):
-    try:
-        data = (supabase.table("item_menu")
-                .select("*")
-                .ilike(f"%{query}%")
-                .execute())
-        if not data.data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Item/s de nombre {query} no encontrado/s"
-            )
-        return data.data
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+
 
 

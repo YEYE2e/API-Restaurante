@@ -117,6 +117,35 @@ def update_pedido_estado(pedido_id: int, input_data: EstadoUpdateInput):
             detail=f"Error al actualizar el estado del pedido: {str(e)}"
         )
 
+@router.patch("/{pedido_id}/platos")
+def update_pedido_estado(pedido_id: int, input_platos: List[DetallePedidoInput]):
+    detalles_json = [
+            {
+                "item_menu_id": d.item_menu_id,
+                "cantidad": d.cantidad,
+                "notas": d.notas
+            }
+            for d in input_platos
+        ]
+    params = {
+            "p_pedido_id": pedido_id,
+            "p_detalles": detalles_json
+        }
+    try:
+        res = supabase.rpc("actualizar_pedido_con_stock", params).execute()
+        return res.data
+    except Exception as e:
+        error_text = getattr(e, "message", str(e))
+        if "no existe" in error_text or "stock suficiente" in error_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_text
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor."
+        )
+
 @router.get("/{pedido_id}/{user_id}")
 def get_user_pedido(pedido_id: int):
     try:
