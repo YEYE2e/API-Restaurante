@@ -25,10 +25,10 @@ def create_area(area: Area):
 
 
 @router.post("/empleado/")
-def create_user(area_busqueda: int, empleado: Empleado):
+def create_user(area_busqueda: str, empleado: Empleado):
     area = (supabase.table("area")
             .select("*")
-            .ilike("id", f"%{area_busqueda}%").
+            .ilike("nombre", f"%{area_busqueda}%").
             execute())
     if area:
         area_id = area.data[0]["id"]
